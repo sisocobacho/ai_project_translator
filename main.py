@@ -1,7 +1,7 @@
 import os
 import click
 from pathlib import Path
-
+import pyperclip
 
 class Config:
     max_size = 600000
@@ -197,6 +197,20 @@ def format_file_for_ai(file_info, framework=None):
 
     return "\n".join(output)
 
+def copy_to_clipboard(content, verbose=True):
+    """
+    Copy content to clipboard with error handling
+    """
+    try:
+        pyperclip.copy(content)
+        if verbose:
+            click.echo("✅ Output copied to clipboard!")
+        return True
+    except Exception as e:
+        if verbose:
+            click.echo(f"⚠️  Could not copy to clipboard: {str(e)}")
+            click.echo("Output has been printed above. You can copy it manually.")
+        return False
 
 @click.command()
 @click.argument("path", required=False, default=os.getcwd())
@@ -222,7 +236,8 @@ def format_file_for_ai(file_info, framework=None):
     is_flag=True,
     help="Include large files (content will be skipped)",
 )
-def analyze_project(path, framework, max_size, output, include_large):
+@click.option('--no-copy', is_flag=True, help='Do not copy to clipboard (print only)')
+def analyze_project(path, framework, max_size, output, include_large, no_copy):
     """
     Analyze a project directory and return its structure with code content in AI-friendly format.
 
@@ -237,16 +252,18 @@ def analyze_project(path, framework, max_size, output, include_large):
     if not startpath.is_dir():
         click.echo(f"Error: '{path}' is not a directory")
         return
+    
+    # all what is going to be printed
+    all_output = []
 
     if output in ["structure", "both"]:
-        click.echo("**Project Structure:**")
-        click.echo(f"Path: {startpath}")
-        click.echo()
+        all_output.append("**Project Structure:**")
+        all_output.append(f"Path: {startpath}")
+        all_output.append("")
 
         structure = get_directory_structure(startpath)
-        for line in structure:
-            click.echo(line)
-        click.echo()
+        all_output.extend(structure)
+        all_output.append("")
 
     if output in ["files", "both"]:
         code_files = get_code_files_with_content(startpath, max_file_size=max_size)
@@ -255,10 +272,10 @@ def analyze_project(path, framework, max_size, output, include_large):
             click.echo("No code files found in the specified directory.")
             return
 
-        click.echo("=" * 80)
-        click.echo("CODE FILES IN AI-FRIENDLY FORMAT:")
-        click.echo("=" * 80)
-        click.echo()
+        all_output.append("=" * 80)
+        all_output.append("CODE FILES:")
+        all_output.append("=" * 80)
+        all_output.append("")
 
         for file_info in code_files:
             if (
@@ -269,10 +286,14 @@ def analyze_project(path, framework, max_size, output, include_large):
                 continue
 
             formatted_output = format_file_for_ai(file_info, framework)
-            click.echo(formatted_output)
-            click.echo("-" * 80)
-            click.echo()
+            all_output.append(formatted_output)
+            all_output.append("-" * 80)
+            all_output.append("")
 
+    ouput_text = "\n".join(all_output) 
+    click.echo(ouput_text)
+    if not no_copy and ouput_text:
+        copy_to_clipboard(ouput_text, verbose=True)
 
 if __name__ == "__main__":
     analyze_project()
