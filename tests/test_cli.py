@@ -38,6 +38,89 @@ def test_cli_with_framework_option(sample_project_structure):
     assert "**Framework:** FastAPI" in result.output
 
 
+def test_cli_with_question_option(sample_project_structure):
+    """Test CLI with question option."""
+    test_question = "Can you help me refactor this code to use async/await?"
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        main.analyze_project,
+        [str(sample_project_structure), "--question", test_question],
+    )
+
+    assert result.exit_code == 0
+    assert "**Question:**" in result.output
+    assert test_question in result.output
+    # Question should be at the beginning
+    assert result.output.startswith("**Question:**")
+
+
+def test_cli_with_question_and_framework(sample_project_structure):
+    """Test CLI with both question and framework options."""
+    test_question = "How can I improve error handling in this Flask app?"
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        main.analyze_project,
+        [
+            str(sample_project_structure),
+            "--question",
+            test_question,
+            "--framework",
+            "Flask",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "**Question:**" in result.output
+    assert test_question in result.output
+    assert "**Framework:** Flask" in result.output
+    # Question should come before framework in files
+    assert result.output.find("**Question:**") < result.output.find("**Framework:** Flask")
+
+
+def test_cli_with_empty_question(sample_project_structure):
+    """Test CLI with empty question string."""
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        main.analyze_project,
+        [str(sample_project_structure), "--question", ""],
+    )
+
+    assert result.exit_code == 0
+    # Empty question should not be included
+    assert "**Question:**" not in result.output
+
+
+def test_cli_with_question_without_punctuation(sample_project_structure):
+    """Test CLI with question that doesn't end with punctuation."""
+    test_question = "Can you add tests for this function"
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        main.analyze_project,
+        [str(sample_project_structure), "--question", test_question],
+    )
+
+    assert result.exit_code == 0
+    assert "**Question:**" in result.output
+    # Should add period at the end
+    assert f"{test_question}." in result.output
+
+
+def test_cli_with_question_with_punctuation(sample_project_structure):
+    """Test CLI with question that already has punctuation."""
+    test_question = "What's wrong with this code?"
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        main.analyze_project,
+        [str(sample_project_structure), "--question", test_question],
+    )
+
+    assert result.exit_code == 0
+    assert "**Question:**" in result.output
+    # Should keep the original punctuation
+    assert test_question in result.output
+    assert f"{test_question}?" not in result.output  # Should not double the question mark
+
+
 def test_cli_with_output_structure_only(sample_project_structure):
     """Test CLI with structure-only output."""
     runner = click.testing.CliRunner()
