@@ -37,6 +37,52 @@ def test_integration_full_workflow(sample_project_structure, mock_clipboard):
     assert "**Framework:** TestFramework" in clipboard_content
 
 
+def test_integration_single_file_workflow(temp_dir, mock_clipboard):
+    """Test integration workflow with single file."""
+    file_path = temp_dir / "test.py"
+    file_content = """def calculate_sum(a, b):
+    \"\"\"Return the sum of two numbers.\"\"\"
+    return a + b
+"""
+    file_path.write_text(file_content)
+
+    runner = click.testing.CliRunner()
+    result = runner.invoke(
+        main.analyze_project,
+        [
+            str(file_path),
+            "--framework",
+            "Python",
+            "--question",
+            "Can you optimize this function?",
+        ],
+    )
+
+    assert result.exit_code == 0
+
+    # Check output structure for single file
+    output = result.output
+    assert "**Question:**" in output
+    assert "Can you optimize this function?" in output
+    assert "Single File Analysis:" in output
+    assert "File: test.py" in output
+    assert "FILE CONTENT:" in output
+    assert "**Framework:** Python" in output
+    assert "```python" in output
+    assert "def calculate_sum" in output
+    assert "return a + b" in output
+
+    # Should NOT show directory structure elements
+    assert "Project Structure:" not in output
+    assert "CODE FILES:" not in output
+
+    # Check clipboard was called
+    mock_clipboard.copy.assert_called_once()
+    clipboard_content = mock_clipboard.copy.call_args[0][0]
+    assert "Single File Analysis:" in clipboard_content
+    assert "File: test.py" in clipboard_content
+
+
 def test_integration_with_question(sample_project_structure, mock_clipboard):
     """Test integration workflow with question."""
     test_question = "How can I improve the structure of this project?"
@@ -94,7 +140,9 @@ def test_integration_with_permission_error(mocker, temp_dir):
     assert "No code files found in the specified directory." in result.output
 
 
-def test_integration_question_only_with_structure(sample_project_structure, mock_clipboard):
+def test_integration_question_only_with_structure(
+    sample_project_structure, mock_clipboard
+):
     """Test integration with question and structure only output."""
     test_question = "What do you think of this project structure?"
     runner = click.testing.CliRunner()
@@ -111,14 +159,14 @@ def test_integration_question_only_with_structure(sample_project_structure, mock
 
     assert result.exit_code == 0
     output = result.output
-    
+
     # Should have question
     assert "**Question:**" in output
     assert test_question in output
-    
+
     # Should have structure
     assert "**Project Structure:**" in output
-    
+
     # Should NOT have code files section
     assert "CODE FILES:" not in output
 
@@ -140,13 +188,13 @@ def test_integration_question_only_with_files(sample_project_structure, mock_cli
 
     assert result.exit_code == 0
     output = result.output
-    
+
     # Should have question
     assert "**Question:**" in output
     assert test_question in output
-    
+
     # Should NOT have structure
-    assert "**Project Structure:**" not in output
-    
+    assert "**Project Structure:" not in output
+
     # Should have code files section
     assert "CODE FILES:" in output
