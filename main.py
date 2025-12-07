@@ -69,6 +69,21 @@ class Config:
 config = Config()
 
 
+def format_question_for_output(question):
+    """Format the question for inclusion in the output."""
+    if not question:
+        return ""
+    
+    # Clean up the question - remove extra whitespace
+    question = question.strip()
+    
+    # If question doesn't end with punctuation, add a period
+    if question and question[-1] not in ['.', '!', '?', ':']:
+        question = question + '.'
+    
+    return question
+
+
 def get_directory_structure(startpath, exclude_dirs=None, max_depth=3):
     """
     Generate a tree-like structure of the directory
@@ -225,6 +240,11 @@ def copy_to_clipboard(content, verbose=True):
     "--framework", "-f", help="Specify the framework (e.g., Fastapi, React, Django)"
 )
 @click.option(
+    "--question",
+    "-q",
+    help="Include a question to ask the AI at the beginning of the output",
+)
+@click.option(
     "--max-size",
     "-m",
     default=config.max_size,
@@ -244,7 +264,7 @@ def copy_to_clipboard(content, verbose=True):
     help="Include large files (content will be skipped)",
 )
 @click.option("--no-copy", is_flag=True, help="Do not copy to clipboard (print only)")
-def analyze_project(path, framework, max_size, output, include_large, no_copy):
+def analyze_project(path, framework, question, max_size, output, include_large, no_copy):
     """
     Analyze a project directory and return its structure with code content in AI-friendly format.
 
@@ -263,6 +283,13 @@ def analyze_project(path, framework, max_size, output, include_large, no_copy):
 
     # all what is going to be printed
     all_output = []
+
+    # Add the question at the beginning if provided
+    if question:
+        formatted_question = format_question_for_output(question)
+        all_output.append("**Question:**")
+        all_output.append(f"{formatted_question}")
+        all_output.append("")
 
     if output in ["structure", "both"]:
         all_output.append("**Project Structure:**")
@@ -302,8 +329,6 @@ def analyze_project(path, framework, max_size, output, include_large, no_copy):
     click.echo(ouput_text)
     if not no_copy and ouput_text:
         copy_to_clipboard(ouput_text, verbose=True)
-    click.echo(startpath)
-    click.echo(Path(path).name)
 
 
 if __name__ == "__main__":
