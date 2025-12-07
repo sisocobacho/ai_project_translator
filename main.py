@@ -16,6 +16,8 @@ class Config:
         "env",
         ".venv",
         ".ruff_cache",
+        "htmlcov",
+        ".pytest_cache",
     }
     extensions = {
         ".py",
@@ -29,6 +31,8 @@ class Config:
         ".xml",
         ".yaml",
         ".yml",
+        ".yml",
+        ".toml",
         ".md",
         ".txt",
     }
@@ -43,6 +47,7 @@ class Config:
         ".json": "json",
         ".xml": "xml",
         ".yaml": "yaml",
+        ".toml": "toml",
         ".yml": "yaml",
         ".md": "markdown",
         ".txt": "text",
