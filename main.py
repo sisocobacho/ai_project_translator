@@ -3,6 +3,7 @@ import click
 from pathlib import Path
 import pyperclip
 
+
 class Config:
     max_size = 600000
     exclude_dirs = {
@@ -14,7 +15,7 @@ class Config:
         "venv",
         "env",
         ".venv",
-        ".ruff_cache"
+        ".ruff_cache",
     }
     extensions = {
         ".py",
@@ -116,7 +117,7 @@ def get_file_extension_language(file_path):
     """
     Map file extensions to language names for code blocks
     """
-    extension_map = config.extension_map    
+    extension_map = config.extension_map
     ext = Path(file_path).suffix.lower()
     return extension_map.get(ext, "text")
 
@@ -191,11 +192,11 @@ def format_file_for_ai(file_info, framework=None):
         output.append(file_info["content"])
         output.append("```")
         output.append("")
-        output.append("**Purpose:** [Brief description of what this file does]")
     else:
         output.append("*No content available*")
 
     return "\n".join(output)
+
 
 def copy_to_clipboard(content, verbose=True):
     """
@@ -211,6 +212,7 @@ def copy_to_clipboard(content, verbose=True):
             click.echo(f"⚠️  Could not copy to clipboard: {str(e)}")
             click.echo("Output has been printed above. You can copy it manually.")
         return False
+
 
 @click.command()
 @click.argument("path", required=False, default=os.getcwd())
@@ -236,7 +238,7 @@ def copy_to_clipboard(content, verbose=True):
     is_flag=True,
     help="Include large files (content will be skipped)",
 )
-@click.option('--no-copy', is_flag=True, help='Do not copy to clipboard (print only)')
+@click.option("--no-copy", is_flag=True, help="Do not copy to clipboard (print only)")
 def analyze_project(path, framework, max_size, output, include_large, no_copy):
     """
     Analyze a project directory and return its structure with code content in AI-friendly format.
@@ -244,6 +246,7 @@ def analyze_project(path, framework, max_size, output, include_large, no_copy):
     PATH: Project directory path (default: current directory)
     """
     startpath = Path(path).resolve()
+    startpath_name = Path(path).name
 
     if not startpath.exists():
         click.echo(f"Error: Path '{path}' does not exist")
@@ -252,13 +255,13 @@ def analyze_project(path, framework, max_size, output, include_large, no_copy):
     if not startpath.is_dir():
         click.echo(f"Error: '{path}' is not a directory")
         return
-    
+
     # all what is going to be printed
     all_output = []
 
     if output in ["structure", "both"]:
         all_output.append("**Project Structure:**")
-        all_output.append(f"Path: {startpath}")
+        all_output.append(f"Path: {startpath_name}")
         all_output.append("")
 
         structure = get_directory_structure(startpath)
@@ -290,10 +293,13 @@ def analyze_project(path, framework, max_size, output, include_large, no_copy):
             all_output.append("-" * 80)
             all_output.append("")
 
-    ouput_text = "\n".join(all_output) 
+    ouput_text = "\n".join(all_output)
     click.echo(ouput_text)
     if not no_copy and ouput_text:
         copy_to_clipboard(ouput_text, verbose=True)
+    click.echo(startpath)
+    click.echo(Path(path).name)
+
 
 if __name__ == "__main__":
     analyze_project()
