@@ -73,14 +73,14 @@ def format_question_for_output(question):
     """Format the question for inclusion in the output."""
     if not question:
         return ""
-    
+
     # Clean up the question - remove extra whitespace
     question = question.strip()
-    
+
     # If question doesn't end with punctuation, add a period
-    if question and question[-1] not in ['.', '!', '?', ':']:
-        question = question + '.'
-    
+    if question and question[-1] not in [".", "!", "?", ":"]:
+        question = question + "."
+
     return question
 
 
@@ -192,6 +192,27 @@ def get_code_files_with_content(
     return sorted(code_files, key=lambda x: x["path"])
 
 
+def get_single_file_info(file_path, max_file_size=config.max_size):
+    """
+    Get information for a single file.
+    """
+    if not any(str(file_path).endswith(ext) for ext in config.extensions):
+        return None
+
+    relative_path = file_path.name
+    language = get_file_extension_language(file_path)
+    content, error = read_file_content(file_path, max_file_size)
+
+    return {
+        "path": relative_path,
+        "full_path": file_path,
+        "language": language,
+        "content": content,
+        "error": error,
+        "size": file_path.stat().st_size if file_path.exists() else 0,
+    }
+
+
 def format_file_for_ai(file_info, framework=None):
     """
     Format a single file in the recommended AI context format
@@ -264,21 +285,21 @@ def copy_to_clipboard(content, verbose=True):
     help="Include large files (content will be skipped)",
 )
 @click.option("--no-copy", is_flag=True, help="Do not copy to clipboard (print only)")
-def analyze_project(path, framework, question, max_size, output, include_large, no_copy):
+def analyze_project(
+    path, framework, question, max_size, output, include_large, no_copy
+):
     """
     Analyze a project directory and return its structure with code content in AI-friendly format.
 
-    PATH: Project directory path (default: current directory)
+    PATH: Project directory path or file path (default: current directory)
+
+    If PATH is a file, only that file will be analyzed.
+    If PATH is a directory, the entire directory will be analyzed.
     """
     startpath = Path(path).resolve()
-    startpath_name = Path(path).name
 
     if not startpath.exists():
         click.echo(f"Error: Path '{path}' does not exist")
-        return
-
-    if not startpath.is_dir():
-        click.echo(f"Error: '{path}' is not a directory")
         return
 
     # all what is going to be printed
@@ -291,39 +312,73 @@ def analyze_project(path, framework, question, max_size, output, include_large, 
         all_output.append(f"{formatted_question}")
         all_output.append("")
 
-    if output in ["structure", "both"]:
-        all_output.append("**Project Structure:**")
-        all_output.append(f"Path: {startpath_name}")
+    if startpath.is_file():
+        # Single file analysis
+        all_output.append("**Single File Analysis:**")
+        all_output.append(f"File: {startpath.name}")
+        all_output.append(f"Path: {startpath.parent}")
         all_output.append("")
 
-        structure = get_directory_structure(startpath)
-        all_output.extend(structure)
-        all_output.append("")
+        file_info = get_single_file_info(startpath, max_file_size=max_size)
 
-    if output in ["files", "both"]:
-        code_files = get_code_files_with_content(startpath, max_file_size=max_size)
-
-        if not code_files:
-            click.echo("No code files found in the specified directory.")
+        if not file_info:
+            click.echo(f"Error: '{startpath}' is not a supported code file type.")
+            click.echo(f"Supported extensions: {', '.join(sorted(config.extensions))}")
             return
 
         all_output.append("=" * 80)
-        all_output.append("CODE FILES:")
+        all_output.append("FILE CONTENT:")
         all_output.append("=" * 80)
         all_output.append("")
 
-        for file_info in code_files:
-            if (
-                not include_large
-                and file_info["error"]
-                and "too large" in file_info["error"]
-            ):
-                continue
+        if (
+            not include_large
+            and file_info["error"]
+            and "too large" in file_info["error"]
+        ):
+            click.echo(f"Skipping large file: {file_info['error']}")
+            return
 
-            formatted_output = format_file_for_ai(file_info, framework)
-            all_output.append(formatted_output)
-            all_output.append("-" * 80)
+        formatted_output = format_file_for_ai(file_info, framework)
+        all_output.append(formatted_output)
+
+    else:
+        # Directory analysis
+        startpath_name = Path(path).name
+
+        if output in ["structure", "both"]:
+            all_output.append("**Project Structure:**")
+            all_output.append(f"Path: {startpath_name}")
             all_output.append("")
+
+            structure = get_directory_structure(startpath)
+            all_output.extend(structure)
+            all_output.append("")
+
+        if output in ["files", "both"]:
+            code_files = get_code_files_with_content(startpath, max_file_size=max_size)
+
+            if not code_files:
+                click.echo("No code files found in the specified directory.")
+                return
+
+            all_output.append("=" * 80)
+            all_output.append("CODE FILES:")
+            all_output.append("=" * 80)
+            all_output.append("")
+
+            for file_info in code_files:
+                if (
+                    not include_large
+                    and file_info["error"]
+                    and "too large" in file_info["error"]
+                ):
+                    continue
+
+                formatted_output = format_file_for_ai(file_info, framework)
+                all_output.append(formatted_output)
+                all_output.append("-" * 80)
+                all_output.append("")
 
     ouput_text = "\n".join(all_output)
     click.echo(ouput_text)
