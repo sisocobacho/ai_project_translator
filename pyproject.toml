@@ -3,7 +3,7 @@ name = "ai-project-translator"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "click>=8.3.1",
     "pyperclip>=1.11.0",
@@ -16,6 +16,14 @@ dev = [
     "pytest-mock>=3.15.1",
     "ruff>=0.14.7",
 ]
+
+[project.scripts]
+ai-pt = "ai_project_translator.main:cli"
+ai_project_translator = "ai_project_translator.main:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

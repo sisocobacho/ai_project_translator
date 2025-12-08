@@ -4,7 +4,7 @@ from pathlib import Path
 # Add the parent directory to sys.path to import main
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import main
+from ai_project_translator import main
 
 
 def test_config_exists():

@@ -4,13 +4,13 @@ import click.testing
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import main
+from ai_project_translator import main
 
 
 def test_cli_without_arguments():
     """Test CLI without any arguments (default current directory)."""
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project)
+    result = runner.invoke(main.cli)
 
     assert result.exit_code == 0
     assert "Project Structure:" in result.output
@@ -20,7 +20,7 @@ def test_cli_without_arguments():
 def test_cli_with_path_argument(sample_project_structure):
     """Test CLI with a path argument."""
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, [str(sample_project_structure)])
+    result = runner.invoke(main.cli, [str(sample_project_structure)])
 
     assert result.exit_code == 0
     assert "Project Structure:" in result.output
@@ -35,7 +35,7 @@ def test_cli_single_file_analysis(temp_dir):
     file_path.write_text(file_content)
 
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, [str(file_path)])
+    result = runner.invoke(main.cli, [str(file_path)])
 
     assert result.exit_code == 0
     assert "Single File Analysis:" in result.output
@@ -55,7 +55,7 @@ def test_cli_single_file_with_framework(temp_dir):
 
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project, [str(file_path), "--framework", "FastAPI"]
+        main.cli, [str(file_path), "--framework", "FastAPI"]
     )
 
     assert result.exit_code == 0
@@ -74,7 +74,7 @@ def test_cli_single_file_with_question(temp_dir):
     test_question = "Can you improve this function?"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project, [str(file_path), "--question", test_question]
+        main.cli, [str(file_path), "--question", test_question]
     )
 
     assert result.exit_code == 0
@@ -91,7 +91,7 @@ def test_cli_single_file_unsupported_extension(temp_dir):
     file_path.write_text(file_content)
 
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, [str(file_path)])
+    result = runner.invoke(main.cli, [str(file_path)])
 
     assert result.exit_code == 0
     assert "Error:" in result.output
@@ -107,7 +107,7 @@ def test_cli_single_file_large_file(temp_dir):
     file_path.write_text(content)
 
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, [str(file_path)])
+    result = runner.invoke(main.cli, [str(file_path)])
 
     assert result.exit_code == 0
     assert "Skipping large file:" in result.output
@@ -121,7 +121,7 @@ def test_cli_single_file_large_file_with_include_large(temp_dir):
     file_path.write_text(content)
 
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, [str(file_path), "--include-large"])
+    result = runner.invoke(main.cli, [str(file_path), "--include-large"])
 
     assert result.exit_code == 0
     assert "Single File Analysis:" in result.output
@@ -138,7 +138,7 @@ def test_cli_single_file_output_options_ignored(temp_dir):
 
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project, [str(file_path), "--output", "structure"]
+        main.cli, [str(file_path), "--output", "structure"]
     )
 
     assert result.exit_code == 0
@@ -151,7 +151,7 @@ def test_cli_with_framework_option(sample_project_structure):
     """Test CLI with framework option."""
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project, [str(sample_project_structure), "--framework", "FastAPI"]
+        main.cli, [str(sample_project_structure), "--framework", "FastAPI"]
     )
 
     assert result.exit_code == 0
@@ -163,7 +163,7 @@ def test_cli_with_question_option(sample_project_structure):
     test_question = "Can you help me refactor this code to use async/await?"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [str(sample_project_structure), "--question", test_question],
     )
 
@@ -179,7 +179,7 @@ def test_cli_with_question_and_framework(sample_project_structure):
     test_question = "How can I improve error handling in this Flask app?"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [
             str(sample_project_structure),
             "--question",
@@ -203,7 +203,7 @@ def test_cli_with_empty_question(sample_project_structure):
     """Test CLI with empty question string."""
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [str(sample_project_structure), "--question", ""],
     )
 
@@ -217,7 +217,7 @@ def test_cli_with_question_without_punctuation(sample_project_structure):
     test_question = "Can you add tests for this function"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [str(sample_project_structure), "--question", test_question],
     )
 
@@ -232,7 +232,7 @@ def test_cli_with_question_with_punctuation(sample_project_structure):
     test_question = "What's wrong with this code?"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [str(sample_project_structure), "--question", test_question],
     )
 
@@ -249,7 +249,7 @@ def test_cli_with_output_structure_only(sample_project_structure):
     """Test CLI with structure-only output."""
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project, [str(sample_project_structure), "--output", "structure"]
+        main.cli, [str(sample_project_structure), "--output", "structure"]
     )
 
     assert result.exit_code == 0
@@ -261,7 +261,7 @@ def test_cli_with_output_files_only(sample_project_structure):
     """Test CLI with files-only output."""
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project, [str(sample_project_structure), "--output", "files"]
+        main.cli, [str(sample_project_structure), "--output", "files"]
     )
 
     assert result.exit_code == 0
@@ -272,7 +272,7 @@ def test_cli_with_output_files_only(sample_project_structure):
 def test_cli_with_nonexistent_path():
     """Test CLI with non-existent path."""
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, ["/nonexistent/path"])
+    result = runner.invoke(main.cli, ["/nonexistent/path"])
 
     assert result.exit_code == 0
     assert "Error: Path" in result.output
@@ -283,7 +283,7 @@ def test_cli_no_copy_option(sample_project_structure, mock_clipboard):
     """Test CLI with --no-copy option."""
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project, [str(sample_project_structure), "--no-copy"]
+        main.cli, [str(sample_project_structure), "--no-copy"]
     )
 
     assert result.exit_code == 0
@@ -294,7 +294,7 @@ def test_cli_include_large_option(sample_project_structure, large_file):
     """Test CLI with --include-large option."""
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [str(sample_project_structure), "--include-large", "--max-size", "100"],
     )
 

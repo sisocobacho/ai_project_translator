@@ -4,14 +4,14 @@ import click.testing
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import main
+from ai_project_translator import main
 
 
 def test_integration_full_workflow(sample_project_structure, mock_clipboard):
     """Test the full integration workflow."""
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [str(sample_project_structure), "--framework", "TestFramework"],
     )
 
@@ -48,7 +48,7 @@ def test_integration_single_file_workflow(temp_dir, mock_clipboard):
 
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [
             str(file_path),
             "--framework",
@@ -88,7 +88,7 @@ def test_integration_with_question(sample_project_structure, mock_clipboard):
     test_question = "How can I improve the structure of this project?"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [
             str(sample_project_structure),
             "--question",
@@ -121,7 +121,7 @@ def test_integration_with_question(sample_project_structure, mock_clipboard):
 def test_integration_empty_directory(temp_dir, mock_clipboard):
     """Test integration with an empty directory."""
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, [str(temp_dir)])
+    result = runner.invoke(main.cli, [str(temp_dir)])
 
     assert result.exit_code == 0
     assert "No code files found" in result.output
@@ -133,7 +133,7 @@ def test_integration_with_permission_error(mocker, temp_dir):
     mocker.patch("os.listdir", side_effect=PermissionError("Access denied"))
 
     runner = click.testing.CliRunner()
-    result = runner.invoke(main.analyze_project, [str(temp_dir)])
+    result = runner.invoke(main.cli, [str(temp_dir)])
 
     # Should still exit successfully but with minimal output
     assert result.exit_code == 0
@@ -147,7 +147,7 @@ def test_integration_question_only_with_structure(
     test_question = "What do you think of this project structure?"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [
             str(sample_project_structure),
             "--question",
@@ -176,7 +176,7 @@ def test_integration_question_only_with_files(sample_project_structure, mock_cli
     test_question = "Can you review these code files?"
     runner = click.testing.CliRunner()
     result = runner.invoke(
-        main.analyze_project,
+        main.cli,
         [
             str(sample_project_structure),
             "--question",

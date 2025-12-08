@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import main
+from ai_project_translator import main
 
 
 def test_get_file_extension_language():

@@ -285,7 +285,7 @@ def copy_to_clipboard(content, verbose=True):
     help="Include large files (content will be skipped)",
 )
 @click.option("--no-copy", is_flag=True, help="Do not copy to clipboard (print only)")
-def analyze_project(
+def cli(
     path, framework, question, max_size, output, include_large, no_copy
 ):
     """
@@ -387,4 +387,4 @@ def analyze_project(
 
 
 if __name__ == "__main__":
-    analyze_project()
+    cli()

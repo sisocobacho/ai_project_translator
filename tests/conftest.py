@@ -53,4 +53,4 @@ def large_file(temp_dir):
 @pytest.fixture
 def mock_clipboard(mocker):
     """Mock the pyperclip module."""
-    return mocker.patch("main.pyperclip", autospec=True)
+    return mocker.patch("ai_project_translator.main.pyperclip", autospec=True)
