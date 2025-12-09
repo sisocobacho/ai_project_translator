@@ -21,6 +21,8 @@ A tool to analyze project directories and returns it structure and code for AI c
 ## Installation
 
 ```bash
+git clone https://github.com/sisocobacho/ai_project_translator.git
+cd ai_project_translator    
 uv pip install -e .
 ```
 ### Usage
@@ -79,6 +81,8 @@ ai-pt --show-config
 
 ## Developers
 ```bash
+git clone https://github.com/sisocobacho/ai_project_translator.git
+cd ai_project_translator    
 uv sync
 ```
 ### Usage
