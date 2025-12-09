@@ -5,6 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ai_project_translator import main
 
+
 def test_format_question_for_output_empty():
     """Test formatting empty question."""
     result = main.format_question_for_output("")

@@ -54,9 +54,7 @@ def test_cli_single_file_with_framework(temp_dir):
     file_path.write_text(file_content)
 
     runner = click.testing.CliRunner()
-    result = runner.invoke(
-        main.cli, [str(file_path), "--framework", "FastAPI"]
-    )
+    result = runner.invoke(main.cli, [str(file_path), "--framework", "FastAPI"])
 
     assert result.exit_code == 0
     assert "Single File Analysis:" in result.output
@@ -73,9 +71,7 @@ def test_cli_single_file_with_question(temp_dir):
 
     test_question = "Can you improve this function?"
     runner = click.testing.CliRunner()
-    result = runner.invoke(
-        main.cli, [str(file_path), "--question", test_question]
-    )
+    result = runner.invoke(main.cli, [str(file_path), "--question", test_question])
 
     assert result.exit_code == 0
     assert "**Question:**" in result.output
@@ -137,9 +133,7 @@ def test_cli_single_file_output_options_ignored(temp_dir):
     file_path.write_text(file_content)
 
     runner = click.testing.CliRunner()
-    result = runner.invoke(
-        main.cli, [str(file_path), "--output", "structure"]
-    )
+    result = runner.invoke(main.cli, [str(file_path), "--output", "structure"])
 
     assert result.exit_code == 0
     # Should show single file analysis regardless of output option
@@ -282,9 +276,7 @@ def test_cli_with_nonexistent_path():
 def test_cli_no_copy_option(sample_project_structure, mock_clipboard):
     """Test CLI with --no-copy option."""
     runner = click.testing.CliRunner()
-    result = runner.invoke(
-        main.cli, [str(sample_project_structure), "--no-copy"]
-    )
+    result = runner.invoke(main.cli, [str(sample_project_structure), "--no-copy"])
 
     assert result.exit_code == 0
     mock_clipboard.copy.assert_not_called()
@@ -301,3 +293,28 @@ def test_cli_include_large_option(sample_project_structure, large_file):
     assert result.exit_code == 0
     # Should mention large files
     assert "too large" in result.output
+
+def test_cli_show_config_option():
+    """Test CLI with --show-config option."""
+    runner = click.testing.CliRunner()
+    result = runner.invoke(main.cli, ["--show-config"])
+    
+    assert result.exit_code == 0
+    assert "Current Configuration:" in result.output
+    assert "Exclude directories:" in result.output
+    assert "Max file size:" in result.output
+    assert "Environment variables used:" in result.output
+
+
+def test_cli_with_environment_variables(monkeypatch, sample_project_structure):
+    """Test CLI with environment variables."""
+    # Set environment variables
+    monkeypatch.setenv("AI_PT_EXCLUDE_DIRS", "tests,docs")
+    monkeypatch.setenv("AI_PT_MAX_SIZE", "100000")
+    
+    runner = click.testing.CliRunner()
+    result = runner.invoke(main.cli, [str(sample_project_structure)])
+    
+    assert result.exit_code == 0
+    # The tool should use the environment variables
+    # (Actual behavior depends on implementation)

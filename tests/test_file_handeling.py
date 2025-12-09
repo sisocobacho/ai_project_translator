@@ -20,7 +20,7 @@ def test_get_file_extension_language():
     ]
 
     for filename, expected_language in test_cases:
-        result = main.get_file_extension_language(filename)
+        result = main.get_file_extension_language(Path(filename))
         assert result == expected_language, (
             f"Failed for {filename}: {result} != {expected_language}"
         )

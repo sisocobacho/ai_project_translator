@@ -2,74 +2,105 @@ import os
 import click
 from pathlib import Path
 import pyperclip
+from typing import Set, Dict, Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
+
+EXCLUDE_DIRS = ".git,__pycache__,node_modules,.vscode,.idea,venv,env,.venv,.ruff_cache,htmlcov,.pytest_cache"
+EXTENSIONS = ".py,.js,.jsx,.ts,.tsx,.html,.css,.json,.xml,.yaml,.yml,.toml,.md,.txt"
+MAX_SIZE = 600000
+class Config(BaseSettings):
+    """Configuration with environment variable support."""
+
+    model_config = SettingsConfigDict(
+        case_sensitive=False,
+        env_prefix="AI_PT_",
+        enable_decoding=False
+    )
+
+    # Core settings with environment variable support
+    max_size: int = Field(
+        default=MAX_SIZE,
+        description="Maximum file size to read in bytes",
+    )
+
+    exclude_dirs: set[str] = Field(
+        default=EXCLUDE_DIRS,
+        description="Directories to exclude from analysis (comma-separated in env)",
+    )
 
 
-class Config:
-    max_size = 600000
-    exclude_dirs = {
-        ".git",
-        "__pycache__",
-        "node_modules",
-        ".vscode",
-        ".idea",
-        "venv",
-        "env",
-        ".venv",
-        ".ruff_cache",
-        "htmlcov",
-        ".pytest_cache",
-    }
-    extensions = {
-        ".py",
-        ".js",
-        ".jsx",
-        ".ts",
-        ".tsx",
-        ".html",
-        ".css",
-        ".json",
-        ".xml",
-        ".yaml",
-        ".yml",
-        ".yml",
-        ".toml",
-        ".md",
-        ".txt",
-    }
-    extension_map = {
-        ".py": "python",
-        ".js": "javascript",
-        ".jsx": "jsx",
-        ".ts": "typescript",
-        ".tsx": "tsx",
-        ".html": "html",
-        ".css": "css",
-        ".json": "json",
-        ".xml": "xml",
-        ".yaml": "yaml",
-        ".toml": "toml",
-        ".yml": "yaml",
-        ".md": "markdown",
-        ".txt": "text",
-        ".sh": "bash",
-        ".bash": "bash",
-        ".php": "php",
-        ".java": "java",
-        ".cpp": "cpp",
-        ".c": "c",
-        ".h": "c",
-        ".cs": "csharp",
-        ".rb": "ruby",
-        ".go": "go",
-        ".rs": "rust",
-        ".sql": "sql",
-    }
+    extensions: set[str] = Field(
+        default=EXTENSIONS,
+        description="File extensions to include (comma-separated in env)",
+    )
+    
+    
+    extension_map: Dict[str, str] = Field(
+        default={
+            ".py": "python",
+            ".js": "javascript",
+            ".jsx": "jsx",
+            ".ts": "typescript",
+            ".tsx": "tsx",
+            ".html": "html",
+            ".css": "css",
+            ".json": "json",
+            ".xml": "xml",
+            ".yaml": "yaml",
+            ".toml": "toml",
+            ".yml": "yaml",
+            ".md": "markdown",
+            ".txt": "text",
+            ".sh": "bash",
+            ".bash": "bash",
+            ".php": "php",
+            ".java": "java",
+            ".cpp": "cpp",
+            ".c": "c",
+            ".h": "c",
+            ".cs": "csharp",
+            ".rb": "ruby",
+            ".go": "go",
+            ".rs": "rust",
+            ".sql": "sql",
+        },
+        description="Mapping of file extensions to language names",
+    )
+
+    max_depth: int = Field(
+        default=3,
+        description="Maximum depth for directory tree",
+    )
+    
+    @field_validator('exclude_dirs', mode='before')
+    @classmethod
+    def decode_exclude_dirs(cls, v: str) -> set[str]:
+        if not v.strip():
+            v = EXCLUDE_DIRS
+        return {x.strip() for x in v.split(',')}
+    
+    @field_validator('extensions', mode='before')
+    @classmethod
+    def decode_extensions(cls, v: str) -> set[str]:
+        if not v.strip():
+            v = EXTENSIONS
+        return {x.strip() for x in v.split(',')}
+    
+    @field_validator('max_size', mode='before')
+    @classmethod
+    def decode_max_size(cls, v: str | int) -> int:
+        if type(v) is int:
+            return v
+        if not v.strip():
+            return MAX_SIZE
+        return int(v)
 
 
+# Global config instance
 config = Config()
 
-
-def format_question_for_output(question):
+def format_question_for_output(question: Optional[str]) -> str:
     """Format the question for inclusion in the output."""
     if not question:
         return ""
@@ -84,15 +115,22 @@ def format_question_for_output(question):
     return question
 
 
-def get_directory_structure(startpath, exclude_dirs=None, max_depth=3):
+def get_directory_structure(
+    startpath: Path,
+    exclude_dirs: Optional[set[str]] = None,
+    max_depth: Optional[int] = None,
+) -> list[str]:
     """
     Generate a tree-like structure of the directory
     """
     if exclude_dirs is None:
         exclude_dirs = config.exclude_dirs
+    if max_depth is None:
+        max_depth = config.max_depth
+
     structure = []
 
-    def build_tree(path, prefix="", depth=0):
+    def build_tree(path: Path, prefix: str = "", depth: int = 0):
         if depth > max_depth:
             return
 
@@ -120,7 +158,7 @@ def get_directory_structure(startpath, exclude_dirs=None, max_depth=3):
             structure.append(f"{prefix}{connector}{directory}/")
 
             new_prefix = prefix + ("    " if is_last_dir else "│   ")
-            build_tree(os.path.join(path, directory), new_prefix, depth + 1)
+            build_tree(path / directory, new_prefix, depth + 1)
 
         # Add files
         for i, file in enumerate(files):
@@ -133,19 +171,24 @@ def get_directory_structure(startpath, exclude_dirs=None, max_depth=3):
     return structure
 
 
-def get_file_extension_language(file_path):
+def get_file_extension_language(file_path: Path) -> str:
     """
     Map file extensions to language names for code blocks
     """
     extension_map = config.extension_map
-    ext = Path(file_path).suffix.lower()
+    ext = file_path.suffix.lower()
     return extension_map.get(ext, "text")
 
 
-def read_file_content(file_path, max_size=config.max_size):
+def read_file_content(
+    file_path: Path, max_size: Optional[int] = None
+) -> tuple[Optional[str], Optional[str]]:
     """
     Read file content with size limitation
     """
+    if max_size is None:
+        max_size = config.max_size
+
     try:
         file_size = os.path.getsize(file_path)
         if file_size > max_size:
@@ -159,16 +202,22 @@ def read_file_content(file_path, max_size=config.max_size):
 
 
 def get_code_files_with_content(
-    startpath, extensions=None, max_file_size=config.max_size
-):
+    startpath: Path,
+    extensions: Optional[Set[str]] = None,
+    max_file_size: Optional[int] = None,
+    exclude_dirs: Optional[Set[str]] = None,
+) -> list[dict]:
     """
     Find all code files in the directory and read their content
     """
     if extensions is None:
         extensions = config.extensions
+    if max_file_size is None:
+        max_file_size = config.max_size
+    if exclude_dirs is None:
+        exclude_dirs = config.exclude_dirs
 
     code_files = []
-    exclude_dirs = config.exclude_dirs
     for root, dirs, files in os.walk(startpath):
         # Skip common excluded directories
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
@@ -176,7 +225,7 @@ def get_code_files_with_content(
             file_path = Path(root) / file
             if any(file.endswith(ext) for ext in extensions):
                 relative_path = os.path.relpath(file_path, startpath)
-                language = get_file_extension_language(file)
+                language = get_file_extension_language(file_path)
                 content, error = read_file_content(file_path, max_file_size)
 
                 code_files.append(
@@ -192,10 +241,15 @@ def get_code_files_with_content(
     return sorted(code_files, key=lambda x: x["path"])
 
 
-def get_single_file_info(file_path, max_file_size=config.max_size):
+def get_single_file_info(
+    file_path: Path, max_file_size: Optional[int] = None
+) -> Optional[dict]:
     """
     Get information for a single file.
     """
+    if max_file_size is None:
+        max_file_size = config.max_size
+
     if not any(str(file_path).endswith(ext) for ext in config.extensions):
         return None
 
@@ -213,7 +267,7 @@ def get_single_file_info(file_path, max_file_size=config.max_size):
     }
 
 
-def format_file_for_ai(file_info, framework=None):
+def format_file_for_ai(file_info: dict, framework: Optional[str] = None) -> str:
     """
     Format a single file in the recommended AI context format
     """
@@ -239,7 +293,7 @@ def format_file_for_ai(file_info, framework=None):
     return "\n".join(output)
 
 
-def copy_to_clipboard(content, verbose=True):
+def copy_to_clipboard(content: str, verbose: bool = True) -> bool:
     """
     Copy content to clipboard with error handling
     """
@@ -268,8 +322,9 @@ def copy_to_clipboard(content, verbose=True):
 @click.option(
     "--max-size",
     "-m",
-    default=config.max_size,
-    help="Maximum file size to read (bytes)",
+    default=None,
+    type=int,
+    help="Maximum file size to read (bytes). Overrides AI_PT_MAX_SIZE env var.",
 )
 @click.option(
     "--output",
@@ -285,8 +340,20 @@ def copy_to_clipboard(content, verbose=True):
     help="Include large files (content will be skipped)",
 )
 @click.option("--no-copy", is_flag=True, help="Do not copy to clipboard (print only)")
+@click.option(
+    "--show-config",
+    is_flag=True,
+    help="Show current configuration and exit",
+)
 def cli(
-    path, framework, question, max_size, output, include_large, no_copy
+    path: str,
+    framework: Optional[str],
+    question: Optional[str],
+    max_size: Optional[int],
+    output: str,
+    include_large: bool,
+    no_copy: bool,
+    show_config: bool,
 ):
     """
     Analyze a project directory and return its structure with code content in AI-friendly format.
@@ -295,12 +362,33 @@ def cli(
 
     If PATH is a file, only that file will be analyzed.
     If PATH is a directory, the entire directory will be analyzed.
+
+    Configuration can be set via environment variables:
+      - AI_PT_EXCLUDE_DIRS: Comma-separated list of directories to exclude
+      - AI_PT_MAX_SIZE: Maximum file size in bytes
+      - AI_PT_EXTENSIONS: Comma-separated list of file extensions to include
+      - AI_PT_MAX_DEPTH: Maximum depth for directory tree
     """
+    if show_config:
+        click.echo("📋 Current Configuration:")
+        click.echo(f"  Exclude directories: {', '.join(sorted(config.exclude_dirs))}")
+        click.echo(f"  Max file size: {config.max_size} bytes")
+        click.echo(f"  File extensions: {', '.join(sorted(config.extensions))}")
+        click.echo(f"  Max directory depth: {config.max_depth}")
+        click.echo("\nEnvironment variables used: AI_PT_*")
+        click.echo(
+            "Example: AI_PT_EXCLUDE_DIRS='dist,build,coverage' ai-pt /path/to/project"
+        )
+        return
+
     startpath = Path(path).resolve()
 
     if not startpath.exists():
         click.echo(f"Error: Path '{path}' does not exist")
         return
+
+    # Use CLI max-size if provided, otherwise use config
+    effective_max_size = max_size if max_size is not None else config.max_size
 
     # all what is going to be printed
     all_output = []
@@ -319,7 +407,7 @@ def cli(
         all_output.append(f"Path: {startpath.parent}")
         all_output.append("")
 
-        file_info = get_single_file_info(startpath, max_file_size=max_size)
+        file_info = get_single_file_info(startpath, max_file_size=effective_max_size)
 
         if not file_info:
             click.echo(f"Error: '{startpath}' is not a supported code file type.")
@@ -356,7 +444,9 @@ def cli(
             all_output.append("")
 
         if output in ["files", "both"]:
-            code_files = get_code_files_with_content(startpath, max_file_size=max_size)
+            code_files = get_code_files_with_content(
+                startpath, max_file_size=effective_max_size
+            )
 
             if not code_files:
                 click.echo("No code files found in the specified directory.")
