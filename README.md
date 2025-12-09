@@ -27,9 +27,35 @@ uv pip install -e .
 ```bash
 ai-pt -q "Can you add logs to the project"
 ```
-### Help
+#### Help
 ```bash
 ai-pt --help   
+```
+
+#### Configuration 
+You can see the current configuration using the show-config option. 
+It will output the current configuration values.
+
+```bash
+ai-pt --show-config   
+```
+Configuration can be set via environment variables:
+ - AI_PT_EXCLUDE_DIRS: Comma-separated list of directories to exclude
+ - AI_PT_MAX_SIZE: Maximum file size in bytes
+ - AI_PT_EXTENSIONS: Comma-separated list of file extensions to include
+ - AI_PT_MAX_DEPTH: Maximum depth for directory tree
+
+For example:
+
+```bash
+export AI_PT_EXCLUDE_DIRS='dist,build,coverage' 
+ai-pt --show-config   
+```
+To go back to defaults
+
+```bash
+unset AI_PT_EXCLUDE_DIRS='dist,build,coverage' 
+ai-pt --show-config   
 ```
 
 ## Developers
@@ -38,9 +64,5 @@ uv sync
 ```
 ### Usage
 ```bash
-uv run main.py -q "Can you add logs to the project"
-```
-### Help
-```bash
-uv run main.py --help   
+uv run ai_project_translator/main.py -q "Can you add logs to the project"
 ```
