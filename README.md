@@ -25,11 +25,29 @@ uv pip install -e .
 ```
 ### Usage
 ```bash
-ai-pt -q "Can you add logs to the project"
+ai-pt path/project -q "Can you add logs to the project"
 ```
 #### Help
 ```bash
 ai-pt --help   
+```
+Shows all options available
+```bash
+Options:
+  -f, --framework TEXT            Specify the framework (e.g., Fastapi, React,
+                                  Django)
+  -q, --question TEXT             Include a question to ask the AI at the
+                                  beginning of the output
+  -m, --max-size INTEGER          Maximum file size to read (bytes). Overrides
+                                  AI_PT_MAX_SIZE env var.
+  -o, --output [structure|files|both]
+                                  Output format
+  -l, --include-large             Include large files (content will be
+                                  skipped)
+  --no-copy                       Do not copy to clipboard (print only)
+  --show-config                   Show current configuration and exit
+  --exclude-files TEXT            Exclude files from analisys
+  --help                          Show this message and exit.
 ```
 
 #### Configuration 
@@ -41,6 +59,7 @@ ai-pt --show-config
 ```
 Configuration can be set via environment variables:
  - AI_PT_EXCLUDE_DIRS: Comma-separated list of directories to exclude
+ - AI_PT_EXCLUDE_FILES: Comma-separated list of files to exclude
  - AI_PT_MAX_SIZE: Maximum file size in bytes
  - AI_PT_EXTENSIONS: Comma-separated list of file extensions to include
  - AI_PT_MAX_DEPTH: Maximum depth for directory tree
@@ -64,5 +83,5 @@ uv sync
 ```
 ### Usage
 ```bash
-uv run ai_project_translator/main.py -q "Can you add logs to the project"
+uv run ai_project_translator/main.py path/project -q "Can you add logs to the project"
 ```
