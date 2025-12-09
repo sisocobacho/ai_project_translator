@@ -9,13 +9,13 @@ from pydantic import Field, field_validator
 EXCLUDE_DIRS = ".git,__pycache__,node_modules,.vscode,.idea,venv,env,.venv,.ruff_cache,htmlcov,.pytest_cache"
 EXTENSIONS = ".py,.js,.jsx,.ts,.tsx,.html,.css,.json,.xml,.yaml,.yml,.toml,.md,.txt"
 MAX_SIZE = 600000
+
+
 class Config(BaseSettings):
     """Configuration with environment variable support."""
 
     model_config = SettingsConfigDict(
-        case_sensitive=False,
-        env_prefix="AI_PT_",
-        enable_decoding=False
+        case_sensitive=False, env_prefix="AI_PT_", enable_decoding=False
     )
 
     # Core settings with environment variable support
@@ -28,14 +28,16 @@ class Config(BaseSettings):
         default=EXCLUDE_DIRS,
         description="Directories to exclude from analysis (comma-separated in env)",
     )
-
+    exclude_files: set[str] = Field(
+        default="",
+        description="Files to exclude from analysis (comma-separated in env)",
+    )
 
     extensions: set[str] = Field(
         default=EXTENSIONS,
         description="File extensions to include (comma-separated in env)",
     )
-    
-    
+
     extension_map: Dict[str, str] = Field(
         default={
             ".py": "python",
@@ -72,22 +74,27 @@ class Config(BaseSettings):
         default=3,
         description="Maximum depth for directory tree",
     )
-    
-    @field_validator('exclude_dirs', mode='before')
+
+    @field_validator("exclude_dirs", mode="before")
     @classmethod
     def decode_exclude_dirs(cls, v: str) -> set[str]:
         if not v.strip():
             v = EXCLUDE_DIRS
-        return {x.strip() for x in v.split(',')}
-    
-    @field_validator('extensions', mode='before')
+        return {x.strip() for x in v.split(",")}
+
+    @field_validator("exclude_files", mode="before")
+    @classmethod
+    def decode_exclude_files(cls, v: str) -> set[str]:
+        return {x.strip() for x in v.split(",")}
+
+    @field_validator("extensions", mode="before")
     @classmethod
     def decode_extensions(cls, v: str) -> set[str]:
         if not v.strip():
             v = EXTENSIONS
-        return {x.strip() for x in v.split(',')}
-    
-    @field_validator('max_size', mode='before')
+        return {x.strip() for x in v.split(",")}
+
+    @field_validator("max_size", mode="before")
     @classmethod
     def decode_max_size(cls, v: str | int) -> int:
         if type(v) is int:
@@ -99,6 +106,7 @@ class Config(BaseSettings):
 
 # Global config instance
 config = Config()
+
 
 def format_question_for_output(question: Optional[str]) -> str:
     """Format the question for inclusion in the output."""
@@ -118,6 +126,7 @@ def format_question_for_output(question: Optional[str]) -> str:
 def get_directory_structure(
     startpath: Path,
     exclude_dirs: Optional[set[str]] = None,
+    exclude_files: Optional[set[str]] = None,
     max_depth: Optional[int] = None,
 ) -> list[str]:
     """
@@ -125,6 +134,8 @@ def get_directory_structure(
     """
     if exclude_dirs is None:
         exclude_dirs = config.exclude_dirs
+    if exclude_files is None:
+        exclude_files = config.exclude_files
     if max_depth is None:
         max_depth = config.max_depth
 
@@ -149,7 +160,8 @@ def get_directory_structure(
             if os.path.isdir(item_path):
                 dirs.append(item)
             else:
-                files.append(item)
+                if item not in exclude_files:
+                    files.append(item)
 
         # Add directories
         for i, directory in enumerate(dirs):
@@ -206,6 +218,7 @@ def get_code_files_with_content(
     extensions: Optional[Set[str]] = None,
     max_file_size: Optional[int] = None,
     exclude_dirs: Optional[Set[str]] = None,
+    exclude_files: Optional[Set[str]] = None,
 ) -> list[dict]:
     """
     Find all code files in the directory and read their content
@@ -216,12 +229,16 @@ def get_code_files_with_content(
         max_file_size = config.max_size
     if exclude_dirs is None:
         exclude_dirs = config.exclude_dirs
+    if exclude_files is None:
+        exclude_files = config.exclude_dirs
 
     code_files = []
     for root, dirs, files in os.walk(startpath):
         # Skip common excluded directories
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
         for file in files:
+            if file in exclude_files:
+                continue
             file_path = Path(root) / file
             if any(file.endswith(ext) for ext in extensions):
                 relative_path = os.path.relpath(file_path, startpath)
@@ -345,6 +362,7 @@ def copy_to_clipboard(content: str, verbose: bool = True) -> bool:
     is_flag=True,
     help="Show current configuration and exit",
 )
+@click.option("--exclude-files", multiple=True, help="Exclude files from analysis")
 def cli(
     path: str,
     framework: Optional[str],
@@ -354,6 +372,7 @@ def cli(
     include_large: bool,
     no_copy: bool,
     show_config: bool,
+    exclude_files: Optional[set[str]],
 ):
     """
     Analyze a project directory and return its structure with code content in AI-friendly format.
@@ -365,6 +384,7 @@ def cli(
 
     Configuration can be set via environment variables:
       - AI_PT_EXCLUDE_DIRS: Comma-separated list of directories to exclude
+      - AI_PT_EXCLUDE_FILES: Comma-separated list of files to exclude
       - AI_PT_MAX_SIZE: Maximum file size in bytes
       - AI_PT_EXTENSIONS: Comma-separated list of file extensions to include
       - AI_PT_MAX_DEPTH: Maximum depth for directory tree
@@ -439,13 +459,13 @@ def cli(
             all_output.append(f"Path: {startpath_name}")
             all_output.append("")
 
-            structure = get_directory_structure(startpath)
+            structure = get_directory_structure(startpath, exclude_files=exclude_files)
             all_output.extend(structure)
             all_output.append("")
 
         if output in ["files", "both"]:
             code_files = get_code_files_with_content(
-                startpath, max_file_size=effective_max_size
+                startpath, max_file_size=effective_max_size, exclude_files=exclude_files
             )
 
             if not code_files:
