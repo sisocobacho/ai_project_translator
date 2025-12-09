@@ -33,6 +33,7 @@ def test_config_defaults():
     assert config.extension_map[".js"] == "javascript"
     assert config.extension_map[".md"] == "markdown"
     assert config.extension_map.get(".xyz", "text") == "text"
+    assert config.exclude_files == {""}
 
 
 def test_config_instance():

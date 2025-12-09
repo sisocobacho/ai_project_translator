@@ -294,11 +294,12 @@ def test_cli_include_large_option(sample_project_structure, large_file):
     # Should mention large files
     assert "too large" in result.output
 
+
 def test_cli_show_config_option():
     """Test CLI with --show-config option."""
     runner = click.testing.CliRunner()
     result = runner.invoke(main.cli, ["--show-config"])
-    
+
     assert result.exit_code == 0
     assert "Current Configuration:" in result.output
     assert "Exclude directories:" in result.output
@@ -310,11 +311,24 @@ def test_cli_with_environment_variables(monkeypatch, sample_project_structure):
     """Test CLI with environment variables."""
     # Set environment variables
     monkeypatch.setenv("AI_PT_EXCLUDE_DIRS", "tests,docs")
+    monkeypatch.setenv("AI_PT_EXCLUDE_FILES", "test.py,requirements.txt")
     monkeypatch.setenv("AI_PT_MAX_SIZE", "100000")
-    
+
     runner = click.testing.CliRunner()
     result = runner.invoke(main.cli, [str(sample_project_structure)])
-    
+
     assert result.exit_code == 0
     # The tool should use the environment variables
     # (Actual behavior depends on implementation)
+
+
+def test_cli_whit_exclude_files_option(temp_dir):
+    runner = click.testing.CliRunner()
+    result = runner.invoke(main.cli)
+    assert result.exit_code == 0
+    assert "pyproject.toml" in result.output
+    result = runner.invoke(
+        main.cli, [str(temp_dir), "--exclude-files", "pyproject.toml"]
+    )
+    assert result.exit_code == 0
+    assert "pyproject.toml" not in result.output
